@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Links Mini V1.1</title>
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    </head>
+    <body style="overflow-x: hidden;">
+
+        {% if user.is_authenticated %}
+            {% include 'lmini_app/base_page.html' %}
+            <div class="container">
+                <form class="form-inline my-2 my-lg-0" method="GET" action="">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                          <label for="inputEmail4">Start date</label>
+                          <input type="date" format='%Y-%m-%d' name="from" class="form-control"  id="inputEmail4" placeholder="Start Date">
+                        </div>
+                        <div class="form-group col-md-6">
+                          <label for="inputEmail4">End date</label>
+                          <input type="date" format='%Y-%m-%d' name="to" class="form-control" id="inputEmail4" placeholder="End date">
+                        </div>
+                      </div>
+                    <input type="submit" name ="search" value="Search">
+                </form>
+            </div>
+            <div class="container"><h5 style="font-weight:bold">{{sd}} : {{ed}}</h5></div>
+            <div class="container">
+                <div class="columns" style="float: left;width: 20%;padding: 8px;overflow: clip; font-size: 8;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;font-size: 8;padding: 0;-webkit-transition: 0.3s;transition: 0.3s;">
+                      <li class="grey" style="font-size: 17px">Curr. Stock Value</li>
+                      <li class="grey" style="font-size: 17px">R{{curr_value}}</li>
+                    </ul>
+                </div>
+                <div class="columns" style="float: left;width: 20%;padding: 8px;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                        <li class="grey" style="font-size: 17px">Profit from Stock Value</li>
+                        <li class="grey" style="font-size: 17px">R{{curr_profit}}</li>
+                    </ul>
+                </div>
+                <div class="columns" style="float: left;width: 20%;padding: 8px;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                        <li class="grey" style="font-size: 17px">Sales</li>
+                        <li class="grey" style="font-size: 17px">R{{sales}}</li>
+                    </ul>
+                </div>
+                <div class="columns" style="float: left;width: 20%;padding: 8px;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                        <li class="grey" style="font-size: 17px">Profit</li>
+                        <li class="grey" style="font-size: 17px">R{{profit}}</li>
+                    </ul>
+                </div>
+                <div class="columns" style="float: left;width: 20%;padding: 8px;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                        <li class="grey" style="font-size: 17px">Adjustments</li>
+                        <li class="grey" style="font-size: 17px">R{{adjustments}}</li>
+                    </ul>
+                </div>
+            </div>
+        {% else %}
+        <li><a class="navbar-link" href="{% url 'user_login' %}">Login</a></li>
+        <li><a class="navbar-link" href="{% url 'register' %}">Regsiter</a></li>
+        {% endif %}
+        {% csrf_token %}
+    </body>
+</html>

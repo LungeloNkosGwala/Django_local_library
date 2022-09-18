@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Links Mini V1.1</title>
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    </head>
+    <body style="overflow-x: hidden;">
+
+        {% if user.is_authenticated %}
+            {% include 'lmini_app/base_page.html' %}
+        <br>
+        <div class="container">
+            <div class="container">
+                <form class="form-inline my-2 my-lg-0" method="GET" action="">
+                    <input type="text" name="partnumber" placeholder="Search Partnumber" value="{{request.GET.asnno}}">
+                    <input type="submit" name ="search" value="Search">
+                </form>
+            </div>
+            <br>
+            <div class="container" style="position: absolute;height:300px;overflow-y:auto;width: 500px;float: left; margin-left: 5%;">
+                <h4>Available Products</h4>
+                <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;">
+                    <form action="#" method="post">
+                        {% block content %}
+                        <table border="1"  class="table table-bordered">
+                            <thead class="header" style="position: sticky; top: 0; z-index: 1; background:#eee; ">
+                                <th>PartNumber</th>
+                                <th>ProductGroup</th>
+                                <th>Cost Price</th>
+                                <th>Sale Price</th>
+                            </thead>
+                            {% for k in data  %}
+                            <tr>
+                                <td>{{k.partnumber}}</td>
+                                <td>{{k.productgroup}}</td>
+                                <td>{{k.costprice}}</td>
+                                <td>{{k.saleprice}}</td>
+                            </tr>
+                            {% empty %}
+                                <h2>No results found</h2>
+                            {% endfor %}
+                        </table>
+                        {% endblock %}
+                </form>
+            </div>
+            <br>
+            <div class="container" style="margin-left: auto;margin-right: -55%;height:300px;position: static">
+                <h4>Selected Part</h4>
+                <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;width: 40%">
+                <div class="columns" style="float: left;width: 10%;padding: 8px;overflow: clip; font-size: 8;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;font-size: 8;padding: 0;-webkit-transition: 0.3s;transition: 0.3s;">
+                      <li class="header" style="background-color:#04AA6D;font-size: 17px;">Partnumber</li>
+                      <li class="grey" style="font-size: 17px">Qty</li>
+                      <li>Total Cost</li>
+                      <li>Total Value</li>
+                      <li>Profit</li>
+                    </ul>
+                </div>
+                    {% for product in inventory %}
+                <div class="columns" style="float: left;width: 30%;padding: 8px;">
+                    <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                        <li class="header" style="background-color:#04AA6D; font-size: 17px;">{{product.partnumber}}</li>
+                        <li class="grey" style="font-size: 17px">{{product.packqty}}</li>
+                        <li>R{{product.totalcost}}</li>
+                        <li>R{{product.totalvalue}}</li>
+                        <li>R{{product.profit}}</li>
+                    </ul>
+                </div>
+                    {% empty %}
+                        <h2>No results found</h2>
+                    {% endfor %}
+            </div>
+        </div>
+
+        {% else %}
+        <li><a class="navbar-link" href="{% url 'user_login' %}">Login</a></li>
+        <li><a class="navbar-link" href="{% url 'register' %}">Regsiter</a></li>
+        {% endif %}
+        {% csrf_token %}
+    </body>
+</html>

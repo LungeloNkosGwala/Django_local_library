@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Links Mini V1.1</title>
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    </head>
+    <body>
+
+        {% if user.is_authenticated %}
+            {% include 'lmini_app/base_page.html' %}
+        <br>
+        <div class="container"><h4>WorkFlow inquire</h4></div>
+        
+        <div class="container">
+            <div class="container">
+                <form class="form-inline my-2 my-lg-0" method="GET" action="">
+                    <input type="text" name="search" placeholder="Search Asn/Part/HU" value="{{request.GET.asnno}}">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                          <label for="inputEmail4">Start date</label>
+                          <input type="date" format='%Y-%m-%d' name="from" class="form-control"  id="inputEmail4" placeholder="Start Date">
+                        </div>
+                        <div class="form-group col-md-6">
+                          <label for="inputEmail4">End date</label>
+                          <input type="date" format='%Y-%m-%d' name="to" class="form-control" id="inputEmail4" placeholder="End date">
+                        </div>
+                      </div>
+                    <input type="submit" value="Search">
+                </form>
+            </div>
+            <div class="container" style="position: absolute;height:300px;overflow-y:auto;width: 1000px;float: left; margin-left: 5%;">
+                {% block content %}
+                <table border="1"  class="table table-bordered"  style="border-collapse: collapse; width: 70%;font-size: 13px">
+                    <thead class="header" style="position: sticky; top: 0; z-index: 1; background:#eee; ">
+                        <th style="position: sticky; top: 0; z-index: 1;" >Type</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">Partnumber</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">SourceQty</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">Qty</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">TargetQty</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">SourceArea</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">TargetArea</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">Holdingunit</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">Transactionsdate</th>
+                        <th style="position: sticky; top: 0; z-index: 1;">User</th>
+                    </thead>
+                    {% for k in data %}
+                    <tr>
+                        <td>{{k.type}}</td>
+                        <td>{{k.partnumber}}</td>
+                        <td>{{k.sourceqty}}</td>
+                        <td>{{k.qty}}</td>
+                        <td>{{k.targetqty}}</td>
+                        <td>{{k.sourcearea}}</td>
+                        <td>{{k.targetarea}}</td>
+                        <td>{{k.holdingunit}}</td>
+                        <td>{{k.transactiondate}}</td>
+                        <td>{{k.user_id}}</td>
+                    </tr>
+                    {% empty %}
+                        <h2>No results found</h2>
+                    {% endfor %}
+                    {% csrf_token %}
+                {% endblock %}
+            </div>
+        </div>
+        <br>
+
+        {% else %}
+        <li><a class="navbar-link" href="{% url 'user_login' %}">Login</a></li>
+        <li><a class="navbar-link" href="{% url 'register' %}">Regsiter</a></li>
+        {% endif %}
+        {% csrf_token %}
+    </body>
+</html>
