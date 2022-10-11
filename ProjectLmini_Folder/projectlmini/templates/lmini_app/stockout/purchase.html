@@ -15,6 +15,7 @@
 
         {% if user.is_authenticated %}
             {% include 'lmini_app/base_page.html' %}
+        <br>
         <div class="container">
             <h4>Stock Purchase</h4>
             <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;width: 40%">
@@ -25,11 +26,63 @@
                 <label for="">Qty</label>
                 <input type="number" id="qty" name="qty" min="1" placeholder="Enter Qty No." Required>
                 <br>
-                <input type="submit" class="btn btn-primary" name="adjust">
+                <button type="submit" class="btn btn-primary" name="stage">Stage</button>
                 {% csrf_token %}
             </form>
         </div>
         <div class="container">{% include 'lmini_app/message.html' %}</div>
+        <br>
+        
+        <div class="container">
+            <h4>Purchase Order</h4>
+            <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;width: 40%">
+            <form action="#" method="post">
+                <label for="">Cash</label>
+                <input type="number" id="qty" name="cash" min="1" placeholder="Enter Qty No.">
+                <button type ="submit" class ="btn btn-danger" name = "calculate" style="font-size: 10px;">Calculate</button>
+                <br>
+                <div class="container">
+                    <div class="columns" style="float: left;width: 20%;padding: 8px;">
+                        <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                            <li class="grey" style="font-size: 17px">Cost</li>
+                            <li class="grey" style="font-size: 17px">R{{Sum}}</li>
+                        </ul>
+                    </div>
+                    <div class="columns" style="float: left;width: 20%;padding: 8px;">
+                        <ul class="price" style="list-style-type: none;border: 1px solid #eee;margin: 0;padding: 0;font-size: 8;-webkit-transition: 0.3s;transition: 0.3s;">
+                            <li class="grey" style="font-size: 17px">Change</li>
+                            <li class="grey" style="font-size: 17px">R{{change}}</li>
+                        </ul>
+                    </div>
+                </div>
+                <br>
+                
+                {% block content %}
+                <table border="1"  class="table table-bordered" style="border-collapse: collapse; width: 70%;font-size: 10px">
+                    <thead class="header" style="position: sticky; top: 0; z-index: 1; background:#eee; ">
+                        <th>PartNumber</th>
+                        <th>Qty</th>
+                        <th>Select</th>
+                        <th>Delete</th>
+                    </thead>
+                    {% for k in data  %}
+                    <tr>
+                        <td>{{k.partnumber}}</td>
+                        <td>{{k.qty}}</td>
+                        <td><input type="checkbox" id="update_status" name="delete" value="{{k.partnumber}}"></td>
+                        <td><button type ="submit" class ="btn btn-danger" style="font-size: 7px;">Execute</button></td>
+                    </tr>
+                    
+                    {% empty %}
+                        <h2>No results found</h2>
+                    {% endfor %}
+                </table>
+                <button type="submit" class="btn btn-primary" name="execute_purchase">Submit</button>
+                {% endblock %}
+                {% csrf_token %}
+            </form>
+            
+        </div>
         <br>
         {% else %}
         <li><a class="navbar-link" href="{% url 'user_login' %}">Login</a></li>

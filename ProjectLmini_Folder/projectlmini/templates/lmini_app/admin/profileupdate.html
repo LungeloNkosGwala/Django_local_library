@@ -14,10 +14,10 @@
 
         {% if user.is_authenticated %}
             {% include 'lmini_app/base_page.html' %}
-            <br>
-            <div class="container" style="border:1px solid #ff8800;">
+            <div class="container">
                 <form method="POST" action="#" enctype="multipart/form-data">
                     <p><b><h4 style="color:green">Upload StockProfile File</h4></b><p>
+                    <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;width: 70%">
                     <P>Upload tab delimited txt file with columns: <b>partnumber|productgroup|barcode|costprice|saleprice|itemcode</b></P>
                     {{form.as_p}}
                     {% csrf_token %}

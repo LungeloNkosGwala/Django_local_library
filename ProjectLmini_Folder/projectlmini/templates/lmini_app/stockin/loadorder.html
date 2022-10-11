@@ -15,15 +15,14 @@
         {% if user.is_authenticated %}
             {% include 'lmini_app/base_page.html' %}
  
-            <div class="container" style="border:1px solid #ff8800;">
-                <h4>Load Order</h4>
-                <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;width: 70%">
+            <div class="container">
                 <form method="POST" action="#" enctype="multipart/form-data">
                     <p><b><h5 style="color:green">Upload stock Order File</h5></b><p>
+                    <hr class="rounded" style="border-top: 8px solid #bbb;border-radius: 5px;width: 70%">
                     <P>Upload tab delimited txt file with columns: <b>orderno|totallines|partnumber|desciption|qty</b></P>
                     {{form.as_p}}
                     {% csrf_token %}
-                    <button type="submit" name="download_orderno">Upload File</button>
+                    <button type="submit" class="btn btn-primary" name="download_orderno">Upload File</button>
                  </form>
             </div>
             {% if messages %}

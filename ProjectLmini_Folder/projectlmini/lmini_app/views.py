@@ -7,9 +7,9 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required,user_passes_test
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from lmini_app.models import Transactions,StockOrder,ProductMaster,Inventory,orderstatus
+from lmini_app.models import Transactions,StockOrder,ProductMaster,Inventory,orderstatus,staging
 from django.contrib import messages
-from django.db.models import Sum,Aggregate,Q
+from django.db.models import Sum,Aggregate,Q,Max
 import pandas as pd
 from django import forms
 from datetime import datetime
@@ -163,7 +163,7 @@ def receivestock(request):
     elif "sel_orderno" in request.POST:
         sel_orderno = request.POST['sel_orderno']
         avail_lines = StockOrder.objects.all().filter(orderno = sel_orderno)
-        return render(request,"lmini_app/stockin/receivestock.html",{"user_d":user_d,"avail_order":avail_order,"avail_lines":avail_lines})
+        return render(request,"lmini_app/stockin/receivestock.html",{"user_d":user_d,"avail_order":avail_order,"avail_lines":avail_lines,"sel_orderno":sel_orderno})
     else:
         if "close" in request.POST and "sel_close_orderno" in request.POST:
             sel_close_orderno = request.POST['sel_close_orderno']
@@ -333,7 +333,7 @@ def download_orderno(request,user_d):
         if verify is None:
             for i in df.iterrows():
                 print(i[1][4])
-                StockOrder.objects.update_or_create(orderno=i[1][0], partnumber=i[1][2],totalqty=i[1][4], line_status=line_status[0])
+                StockOrder.objects.update_or_create(orderno=i[1][0], partnumber=i[1][2],totalqty=i[1][4], linestatus=line_status[0])
             loadorderstatus = orderstatus.objects.create(orderno = orderno_r)
             loadorderstatus.status = line_status[1]
             loadorderstatus.nooflines = df.iloc[:, 5-1:5].count()
@@ -439,28 +439,36 @@ def adjustments(request):
                 messages.warning(request, "Successfully adjusted Partnumber")
                 return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
         else:
-            qty = qty*-1
             verify = ProductMaster.objects.filter(Q(partnumber=partnumber)|Q(barcode=partnumber)|Q(itemcode=partnumber)).first()
             if verify is None:
+                print("Partnumber doesn't exist of ProductMaster")
+                messages.warning(request, "Partnumber doesn't exist of ProductMaster")
                 return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
             else:
                 partnumber = str(ProductMaster.objects.get(Q(partnumber=partnumber)|Q(barcode=partnumber)|Q(itemcode=partnumber)).partnumber)
-                s_qty = int(Inventory.objects.get(partnumber=partnumber).packqty)
-                if s_qty < qty:
-                    print("Cannot down adjustment ")
-                    messages.warning(request, "Cannot down adjustment more available qty")
+                verify = Inventory.objects.filter(partnumber=partnumber).first()
+                if verify is None:
+                    print("Cannot down-adjust Partnumber, there's not stock qty available")
+                    messages.warning(request, "Cannot down-adjust Partnumber, there's not stock qty available")
                     return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
                 else:
-                    inventory(request,partnumber,orderno,qty)
-                    adjust_tran(request,user_d,partnumber,qty)
                     s_qty = int(Inventory.objects.get(partnumber=partnumber).packqty)
-                    if s_qty == 0:
-                        Inventory.objects.filter(partnumber=partnumber).delete()
+                    if s_qty < qty:
+                        print("Cannot down adjustment ")
+                        messages.warning(request, "Cannot down adjustment more available qty")
+                        return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
                     else:
-                        pass
-                    print("Successfully adjusted Partnumber")
-                    messages.warning(request, "Successfully adjusted Partnumber")
-                    return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
+                        qty = qty*-1
+                        inventory(request,partnumber,orderno,qty)
+                        adjust_tran(request,user_d,partnumber,qty)
+                        s_qty = int(Inventory.objects.get(partnumber=partnumber).packqty)
+                        if s_qty == 0:
+                            Inventory.objects.filter(partnumber=partnumber).delete()
+                        else:
+                            pass
+                        print("Successfully adjusted Partnumber")
+                        messages.warning(request, "Successfully adjusted Partnumber")
+                        return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
     return render(request,"lmini_app/admin/adjustments.html",{"user_d":user_d})
 
 def purchase_tran(request,user_d,partnumber,qty):
@@ -479,40 +487,82 @@ def purchase_tran(request,user_d,partnumber,qty):
 def purchase(request):
     user_d = request.user
     orderno = ""
-    if request.method == "POST":
+    data = staging.objects.all()
+    if "stage" in request.POST:
         partnumber = request.POST['partnumber']
         qty = int(request.POST['qty'])
         verify = ProductMaster.objects.filter(Q(partnumber=partnumber)|Q(barcode=partnumber)|Q(itemcode=partnumber)).first()
         if verify is None:
             print("Partnumber doesn't exist on the system")
             messages.warning(request, "Partnumber doesn't exist in ProductMaster")
-            return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d})
+            return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
         else:
             partnumber = str(ProductMaster.objects.get(Q(partnumber=partnumber)|Q(barcode=partnumber)|Q(itemcode=partnumber)).partnumber)
             verify = Inventory.objects.filter(partnumber=partnumber).first()
             if verify is None:
                 print("Out of stock")
                 messages.warning(request, "No stock available for this Product")
-                return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d})
+                return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
             else:
                 s_qty = int(Inventory.objects.get(partnumber=partnumber).packqty)
                 if s_qty < qty:
                     print("Unable to process purchase, The qty is more than available stock")
                     messages.warning(request, "Unable to process purchase, The qty is more than available stock")
-                    return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d})
+                    return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
                 else:
-                    qty = qty*-1
-                    inventory(request,partnumber,orderno,qty)
-                    purchase_tran(request,user_d,partnumber,qty)
-                    s_qty = int(Inventory.objects.get(partnumber=partnumber).packqty)
-                    if s_qty == 0:
-                        Inventory.objects.filter(partnumber=partnumber).delete()
-                    else:
-                        pass
-                    print("Successfully purchased part")
-                    messages.warning(request, "Successfully purchased part")
-                    return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d})
-    return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d})
+                    load_staging = staging.objects.create(partnumber = partnumber)
+                    load_staging.qty = qty
+                    load_staging.stagingtype = "purchase"
+                    load_staging.save()
+                    messages.warning(request, "Stock Staged successfully")
+                    return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
+
+    elif "execute_purchase" in request.POST:
+            data = staging.objects.all().filter(stagingtype="purchase")
+            for i in data:
+                partnumber = i.partnumber
+                qty = i.qty
+                qty = qty*-1
+                inventory(request,partnumber,orderno,qty)
+                purchase_tran(request,user_d,partnumber,qty)
+                s_qty = int(Inventory.objects.get(partnumber=partnumber).packqty)
+                staging.objects.filter(stagingtype="purchase").delete()
+                if s_qty == 0:
+                    Inventory.objects.filter(partnumber=partnumber).delete()
+                else:
+                    continue
+            staging.objects.filter(stagingtype="purchase").delete()
+            print("Stock purchase successfully processed")
+            messages.warning(request, "Stock purchase successfully processed")
+            return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
+    elif "calculate" in request.POST:
+        cash = request.POST['cash']
+        Package_cost = []
+        for i in staging.objects.all().filter(stagingtype="purchase"):
+            partnumber = i.partnumber
+            qty = i.qty
+            sale_price = float(ProductMaster.objects.get(partnumber = partnumber).saleprice)
+            total = qty*sale_price
+            Package_cost.append(total)
+        Sum = sum(Package_cost)
+        print(Sum)
+        if cash == "":
+            cash = 0
+            change = 0
+        else:
+            change = int(cash) - Sum
+        return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data,"Sum":Sum,"change":change})
+
+    else:
+        if "delete" in request.POST:
+            partnumber = request.POST['delete']
+            staging.objects.filter(partnumber=partnumber,stagingtype="purchase").delete()
+            return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
+
+
+    return render(request,"lmini_app/stockout/purchase.html",{"user_d":user_d,"data":data})
+
+
 
 
 @login_required
@@ -562,6 +612,104 @@ def stockvalue(request):
         sales = round(df[df['tran_type']=="stockout"]['totalvalue'].sum()*-1,1)
         adjustments = round(df[df['tran_type']=="adjustment"]['totalvalue'].sum(),1)
         profit = round(sales - round(df[df['tran_type']=="stockout"]['totalcost'].sum()*-1,1),1)
-        return render(request, "lmini_app/inquire/stockvalue.html",{"user_d":user_d,"sales":sales,"adjustments":adjustments,"curr_value":curr_value,"curr_profit":curr_profit,"profit":profit,"sd":sd,"ed":ed})
+
+
+        stockout = df[df['tran_type']=='stockout'].groupby(['part'])['amount'].sum().sort_values(ascending = True)
+        stockout = stockout.reset_index()
+        data_t= dict()
+        for col in stockout.columns:
+            data_t[col] = stockout[col].values.tolist()
+
+        return render(request, "lmini_app/inquire/stockvalue.html",{"user_d":user_d,"sales":sales,"adjustments":adjustments,"curr_value":curr_value,"curr_profit":curr_profit,"profit":profit,"sd":sd,"ed":ed,"data_t":data_t.items})
     return render(request, "lmini_app/inquire/stockvalue.html",{"user_d":user_d,"curr_value":curr_value,"curr_profit":curr_profit})
-        
+
+
+def create(request, orderno):
+    create_status = orderstatus.objects.create(orderno=orderno)
+    create_status.status = line_status[1]
+    create_status.totalqty = list(staging.objects.filter(stagingtype="createorder").aggregate(Sum('qty')).values())[0]
+    create_status.nooflines = staging.objects.filter(stagingtype="createorder").count()
+    create_status.save()
+    for i in staging.objects.all().filter(stagingtype="createorder"):
+        create_lines = StockOrder.objects.create(orderno=orderno)
+        create_lines.partnumber = i.partnumber
+        create_lines.totalqty = i.qty
+        create_lines.save()
+
+
+@login_required
+@user_passes_test(check_admin,"index")
+def createorder(request):
+    user_d = request.user
+    data = staging.objects.all().filter(stagingtype="createorder")
+    if "create" in request.POST:
+        if data is None:
+            messages.warning(request, "No available staged Data")
+            return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+        else:
+            orderno = 20000
+            verify = orderstatus.objects.filter().first()
+            if verify is None:
+                create(request, orderno)
+                staging.objects.filter(stagingtype="createorder").delete()
+                messages.warning(request, "Order created successfully")
+                return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+            else:
+                orderno = int(list(orderstatus.objects.filter().aggregate(Max('orderno')).values())[0])+1
+                create(request, orderno)
+                staging.objects.filter(stagingtype="createorder").delete()
+                messages.warning(request, "Order created successfully")
+                return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+
+    elif "delete" in request.POST:
+            partnumber = request.POST['delete']
+            staging.objects.filter(partnumber=partnumber,stagingtype="createorder").delete()
+            print("Part successfully remove from staging")
+            messages.warning(request, "Part successfully remove from staging")
+            return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+    elif "calculate" in request.POST:
+            Package_cost = []
+            verify = staging.objects.filter(stagingtype="createorder")
+            if verify is None:
+                messages.warning(request, "No parts in staging for cost calculation")
+                return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+            else:
+                for i in staging.objects.all().filter(stagingtype="createorder"):
+                    partnumber = i.partnumber
+                    qty = i.qty
+                    cost_price = float(ProductMaster.objects.get(partnumber = partnumber).costprice)
+                    total = qty*cost_price
+                    Package_cost.append(total)
+                Sum = round(sum(Package_cost),2)
+                return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data,"Sum":Sum})
+
+
+    else:
+        if "stage" in request.POST:
+            partnumber = request.POST['partnumber']
+            qty = int(request.POST['qty'])
+            verify = ProductMaster.objects.filter(Q(partnumber=partnumber)|Q(barcode=partnumber)|Q(itemcode=partnumber)).first()
+            if verify is None:
+                print("Partnumber doesn't exist on the system")
+                messages.warning(request, "Partnumber doesn't exist in ProductMaster")
+                return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+            else:
+                partnumber = str(ProductMaster.objects.get(Q(partnumber=partnumber)|Q(barcode=partnumber)|Q(itemcode=partnumber)).partnumber)
+                verify = staging.objects.filter(partnumber=partnumber,stagingtype="createorder").first()
+                if verify is None:
+                    load_staging = staging.objects.create(partnumber = partnumber)
+                    load_staging.qty = qty
+                    load_staging.stagingtype = "createorder"
+                    load_staging.save()
+                    messages.warning(request, "Stock Staged successfully")
+                    return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+                else:
+                    messages.warning(request, "Partnumber also staged")
+                    return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+    return render(request,"lmini_app/stockin/createorder.html",{"user_d":user_d,"data":data})
+
+
+
+                
+
+

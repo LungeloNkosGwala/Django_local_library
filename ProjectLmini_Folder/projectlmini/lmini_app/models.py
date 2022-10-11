@@ -1,3 +1,4 @@
+from email.policy import default
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -55,6 +56,12 @@ class orderstatus(models.Model):
     qtyreceived = models.IntegerField(default = 0)
     createdate = models.DateTimeField(auto_now_add=True)
     closeddate = models.DateTimeField(null=True, blank=True)
+
+
+class staging(models.Model):
+    stagingtype = models.CharField(max_length=30)
+    partnumber = models.CharField(max_length=30)
+    qty = models.IntegerField(default=0)
 
     
 
